@@ -12,7 +12,7 @@ from utils.constants import Constants
 from utils.plot import visualize
 from utils.logger import custom_logger
 from utils.root_config import get_root_config
-
+import torch.serialization
 
 if __name__ == "__main__":
 
@@ -71,8 +71,8 @@ if __name__ == "__main__":
     ####################################### Functional Part of Program ########################################
 
     preprocessing_fn = smp.encoders.get_preprocessing_fn(encoder, encoder_weights)
-    model = torch.load(model_path, map_location=torch.device(device))
-
+    torch.serialization.add_safe_globals([smp.Unet])
+    model = torch.load(model_path, map_location=torch.device(device), weights_only=False)
     class_values = [Constants.CLASSES.value.index(cls.lower()) for cls in classes]
     
     img_list = list(filter(lambda x:x.endswith((file_type)), os.listdir(img_dir)))

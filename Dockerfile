@@ -1,22 +1,20 @@
-# set base image (host OS)
+# Base image
 FROM python:3.9
 
-# set the working directory in the container
+# Set working directory in container
 WORKDIR /segment_project
 
-# copy the dependencies file to the working directory
+# Copy dependencies file
 COPY requirements.txt .
 
-# install dependencies
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# copy the content from the local directory to the working directory
+# Copy project files
 COPY ./config ./config
 COPY ./data ./data
 COPY ./models ./models
 COPY ./src ./src
 
-# command to run on container start
-# comment and uncomment either of the following lines based on whether to train or test the model
-CMD [ "python", "./src/test.py" ]
-# CMD [ "python", "./src/train.py" ]
+# Run Streamlit app on container start
+CMD ["streamlit", "run", "./src/app.py", "--server.port=7860", "--server.address=0.0.0.0", "--server.headless=true"]
