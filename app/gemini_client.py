@@ -205,10 +205,11 @@ Return ONLY the properly formatted JSON."""
                 }
         
         except httpx.HTTPStatusError as e:
-            logger.error(f"Gemini API HTTP error: {e.status_code} - {e.response.text}")
-            if e.status_code == 401:
+            status_code = e.response.status_code
+            logger.error(f"Gemini API HTTP error: {status_code} - {e.response.text}")
+            if status_code == 401:
                 raise ValueError("Invalid GEMINI_API_KEY") from e
-            elif e.status_code == 429:
+            elif status_code == 429:
                 raise ValueError("Gemini API rate limit exceeded") from e
             else:
                 raise
