@@ -7,11 +7,16 @@ from tqdm import tqdm
 import segmentation_models_pytorch as smp
 import segmentation_models_pytorch.utils
 from patchify import patchify, unpatchify
+from torch.serialization import add_safe_globals
+from segmentation_models_pytorch.decoders.unet.model import Unet
 
 from utils.constants import Constants
 from utils.plot import visualize
 from utils.logger import custom_logger
 from utils.root_config import get_root_config
+
+# Allowlist the Unet class for safe loading
+add_safe_globals([Unet])
 
 
 if __name__ == "__main__":
@@ -71,7 +76,7 @@ if __name__ == "__main__":
     ####################################### Functional Part of Program ########################################
 
     preprocessing_fn = smp.encoders.get_preprocessing_fn(encoder, encoder_weights)
-    model = torch.load(model_path, map_location=torch.device(device))
+    model = torch.load(model_path, map_location=torch.device(device), weights_only=False)
 
     class_values = [Constants.CLASSES.value.index(cls.lower()) for cls in classes]
     

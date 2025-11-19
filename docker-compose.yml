@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  land-cover-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: land-cover-segmentation-api
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - MODEL_CHECKPOINT=/app/models/trained_landcover_unet_efficientnet-b0_epochs18_patch512_batch16.pth
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=gemini-1.5-flash
+      - DEVICE=cpu
+      - NUM_CLASSES=5
+      - ENCODER=efficientnet-b0
+      - ENCODER_WEIGHTS=imagenet
+      - HOST=0.0.0.0
+      - PORT=8000
+      - LOG_LEVEL=info
+    volumes:
+      - ./models:/app/models:ro
+      - ./workdir:/app/workdir
+      - ./logs:/app/logs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - land-cover-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  land-cover-network:
+    driver: bridge
