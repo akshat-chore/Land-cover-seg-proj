@@ -6,7 +6,7 @@ Final comprehensive test of the Gemini API report generation with the fix.
 import json
 import httpx
 
-GEMINI_API_KEY = "AIzaSyArjwEY4xcmJA6YrCl2r7DkGTPJ5zFWHss"
+GEMINI_API_KEY = "Use Your API Key"
 MODEL = "gemini-2.5-flash"
 
 metrics = {
