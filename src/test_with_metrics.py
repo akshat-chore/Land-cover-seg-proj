@@ -177,7 +177,7 @@ if __name__ == "__main__":
     ####################################### Functional Part of Program ########################################
 
     preprocessing_fn = smp.encoders.get_preprocessing_fn(encoder, encoder_weights)
-    model = torch.load(model_path, map_location=torch.device(device))
+    model = torch.load(model_path, map_location=torch.device(device), weights_only=False)
 
     class_values = [Constants.CLASSES.value.index(cls.lower()) for cls in classes]
     num_classes = len(class_values)

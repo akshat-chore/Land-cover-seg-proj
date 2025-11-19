@@ -8,7 +8,7 @@ import cv2
 import base64
 import io
 from PIL import Image
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, List, Any
 import logging
 import tempfile
 import os
@@ -44,8 +44,6 @@ def colorize_mask(mask: np.ndarray, class_colors: Dict[int, Tuple] = None) -> np
     
     Returns:
         np.ndarray: RGB colorized image (H, W, 3).
-    
-    TODO: Allow custom color schemes via configuration.
     """
     if class_colors is None:
         class_colors = CLASS_COLORS
@@ -333,3 +331,273 @@ def save_mask_as_png(mask: np.ndarray, filepath: str) -> bool:
     except Exception as e:
         logger.error(f"Error saving mask to {filepath}: {e}")
         return False
+
+
+# ---------------------------
+# Urban Risk Analysis helpers
+# ---------------------------
+
+def mask_to_prob_arrays(label_mask: np.ndarray, class_names_map: Optional[Dict[int, str]] = None) -> Dict[str, np.ndarray]:
+    """
+    Convert integer label mask (HxW) -> dict of per-class float arrays (0/1).
+    class_names_map: {0:'background',1:'building',...}
+    Returns: {"building": arr, "water": arr, ...} arrays dtype float32 in [0,1]
+    """
+    if class_names_map is None:
+        class_names_map = CLASS_NAMES
+
+    h, w = label_mask.shape[:2]
+    arrs: Dict[str, np.ndarray] = {}
+    for cid, name in class_names_map.items():
+        try:
+            arrs[name] = (label_mask == int(cid)).astype(np.float32)
+        except Exception:
+            arrs[name] = np.zeros((h, w), dtype=np.float32)
+    return arrs
+
+
+# ---------- Robust connected-component + dilation fallbacks ----------
+from collections import deque
+
+def label_connected_components(bin_arr: np.ndarray) -> Tuple[int, np.ndarray]:
+    """
+    Label connected components in a binary 2D uint8 array.
+    Tries scipy.ndimage.label, otherwise uses a BFS flood-fill fallback.
+    Returns (num_labels_plus_one, labels_array) where labels start at 1 and 0 is background.
+    """
+    # Try scipy first (recommended, fast)
+    try:
+        import scipy.ndimage as ndi
+        labels, num = ndi.label(bin_arr, structure=np.ones((3,3), dtype=np.int32))
+        # ndi.label returns labels starting at 1 and num = number of features
+        return int(num) + 1, labels.astype(np.int32)  # +1 to mimic cv2.connectedComponents behaviour
+    except Exception:
+        pass
+
+    # Fallback: BFS flood fill labeling (pure Python + numpy). Labels start at 1.
+    h, w = bin_arr.shape
+    labels = np.zeros((h, w), dtype=np.int32)
+    current_label = 1
+    visited = np.zeros_like(bin_arr, dtype=np.uint8)
+
+    # 8-connectivity neighbors
+    neighbor_offsets = [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)]
+
+    for i in range(h):
+        for j in range(w):
+            if bin_arr[i, j] and not visited[i, j]:
+                # BFS
+                q = deque()
+                q.append((i,j))
+                visited[i, j] = 1
+                labels[i, j] = current_label
+                while q:
+                    y,x = q.popleft()
+                    for dy,dx in neighbor_offsets:
+                        ny, nx = y + dy, x + dx
+                        if 0 <= ny < h and 0 <= nx < w:
+                            if bin_arr[ny, nx] and not visited[ny, nx]:
+                                visited[ny, nx] = 1
+                                labels[ny, nx] = current_label
+                                q.append((ny, nx))
+                current_label += 1
+
+    # mimic cv2.connectedComponents return: num_labels = current_label (including background as label 0 not counted)
+    num_labels = current_label  # this equals (#components + 1)
+    return num_labels, labels
+
+
+def dilate_binary(bin_arr: np.ndarray, radius_px: int) -> np.ndarray:
+    """
+    Dilate a binary array by radius_px pixels.
+    Tries scipy.ndimage.binary_dilation, otherwise uses a simple iterative neighbor expansion.
+    """
+    if radius_px <= 0:
+        return bin_arr.copy()
+    # Try scipy
+    try:
+        import scipy.ndimage as ndi
+        struct = ndi.generate_binary_structure(2, 2)
+        # create disk-like structuring element approximately by successive dilations
+        out = bin_arr.copy().astype(bool)
+        out = ndi.binary_dilation(out, structure=struct, iterations=radius_px)
+        return out.astype(np.uint8)
+    except Exception:
+        pass
+
+    # Fallback: iterative 8-neighbor dilation radius_px times (slower but works)
+    out = bin_arr.copy().astype(np.uint8)
+    h, w = out.shape
+    for _ in range(radius_px):
+        # create shifted OR of neighbors
+        up    = np.pad(out[:-1,:], ((1,0),(0,0)), mode='constant')
+        down  = np.pad(out[1:,:], ((0,1),(0,0)), mode='constant')
+        left  = np.pad(out[:,:-1], ((0,0),(1,0)), mode='constant')
+        right = np.pad(out[:,1:], ((0,0),(0,1)), mode='constant')
+        ul = np.pad(out[:-1,:-1], ((1,0),(1,0)), mode='constant')
+        ur = np.pad(out[:-1,1:], ((1,0),(0,1)), mode='constant')
+        dl = np.pad(out[1:,:-1], ((0,1),(1,0)), mode='constant')
+        dr = np.pad(out[1:,1:], ((0,1),(0,1)), mode='constant')
+        out = np.clip(out | up | down | left | right | ul | ur | dl | dr, 0, 1).astype(np.uint8)
+    return out
+
+
+def compute_buildings_near_water(building_arr: np.ndarray, water_arr: np.ndarray, buffer_pixels: int = 10) -> Tuple[int, int, float]:
+    """
+    Robust computation of connected building components near water, with fallbacks
+    if OpenCV or SciPy are missing.
+    Returns: (total_building_components, num_near_water, pct_near_water)
+    """
+    # Binarize arrays
+    bld = (building_arr > 0.5).astype(np.uint8)
+    wtr = (water_arr > 0.5).astype(np.uint8)
+
+    # Quick exits
+    if np.sum(bld) == 0:
+        return 0, 0, 0.0
+    if np.sum(wtr) == 0:
+        # no water => no buildings near water
+        # but still count components
+        num_labels, labels = label_connected_components(bld)
+        total = max(0, int(num_labels) - 1)
+        return total, 0, 0.0
+
+    # Label building components
+    num_labels, labels = label_connected_components(bld)
+    total = max(0, int(num_labels) - 1)
+    if total == 0:
+        return 0, 0, 0.0
+
+    # Create water buffer (dilation)
+    if buffer_pixels <= 0:
+        buffer_pixels = 1
+    water_buffer = dilate_binary(wtr, buffer_pixels)
+
+    # For each labeled component check overlap with buffer
+    near_count = 0
+    # labels values start at 1 ... num_labels-1
+    for label_id in range(1, num_labels):
+        comp_mask = (labels == label_id)
+        if np.any(comp_mask & water_buffer.astype(bool)):
+            near_count += 1
+
+    pct = (near_count / total) * 100.0 if total > 0 else 0.0
+    return int(total), int(near_count), float(pct)
+
+def compute_risk_map(
+    pred_mask: np.ndarray,
+    class_names_map: Optional[Dict[int, str]] = None,
+    tile_size: int = 256,
+    weights: Optional[Dict[str, float]] = None,
+    pixel_size_meters: Optional[float] = None,
+    buffer_meters: float = 50.0
+) -> Tuple[np.ndarray, List[Dict[str, Any]], Dict[str, Any], List[str]]:
+    """
+    Compute per-pixel risk map and aggregated tile risk scores.
+
+    Args:
+      pred_mask: HxW integer mask (class ids)
+      class_names_map: mapping of ids to names (like CLASS_NAMES). If None, uses CLASS_NAMES.
+      tile_size: tile size in pixels for aggregation
+      weights: dict with keys 'water','building','woodland','road_penalty' (defaults used if None)
+      pixel_size_meters: if provided, used to convert buffer_meters -> buffer_pixels
+      buffer_meters: distance in meters to consider building near water (if pixel_size_meters known)
+
+    Returns:
+      risk_map: HxW float array in [0,1]
+      tiles: list of dicts {"tile_id", "x","y","w","h","building_ratio","risk_score","risk_level"}
+      risk_summary: {"mean_risk", "high_risk_tile_pct","buildings_near_water_pct","roads_missing", ...}
+      risk_flags: list of strings (badges)
+    """
+    if class_names_map is None:
+        class_names_map = CLASS_NAMES
+
+    if weights is None:
+        weights = {"water": 0.5, "building": 0.3, "woodland": 0.2, "road_penalty": 0.25}
+
+    # Convert to per-class float arrays
+    arrs = mask_to_prob_arrays(pred_mask, class_names_map)
+    h, w = pred_mask.shape[:2]
+    water = arrs.get("water", np.zeros((h, w), dtype=np.float32))
+    building = arrs.get("building", np.zeros((h, w), dtype=np.float32))
+    woodland = arrs.get("woodland", np.zeros((h, w), dtype=np.float32))
+    road = arrs.get("road", np.zeros((h, w), dtype=np.float32))
+
+    # Basic pixel-wise raw score
+    raw = weights["water"] * water + weights["building"] * building - weights["woodland"] * woodland + weights["road_penalty"] * (1.0 - road)
+    risk = np.clip(raw, 0.0, 1.0)
+
+    # Aggregate into tiles
+    tiles: List[Dict[str, Any]] = []
+    tile_id = 0
+    high_count = 0
+    total_tiles = 0
+    for y in range(0, h, tile_size):
+        for x in range(0, w, tile_size):
+            block = risk[y:min(y + tile_size, h), x:min(x + tile_size, w)]
+            bld_block = building[y:min(y + tile_size, h), x:min(x + tile_size, w)]
+            # avoid empty blocks
+            if block.size == 0:
+                continue
+            mean_risk = float(np.nanmean(block))
+            bld_ratio = float(np.sum(bld_block) / block.size)
+            if mean_risk >= 0.75:
+                level = "high"
+                high_count += 1
+            elif mean_risk >= 0.5:
+                level = "medium"
+            else:
+                level = "low"
+            tiles.append({
+                "tile_id": tile_id,
+                "x": int(x),
+                "y": int(y),
+                "w": int(min(tile_size, w - x)),
+                "h": int(min(tile_size, h - y)),
+                "building_ratio": round(bld_ratio, 6),
+                "risk_score": round(mean_risk, 6),
+                "risk_level": level
+            })
+            tile_id += 1
+            total_tiles += 1
+
+    high_risk_tile_pct = (high_count / total_tiles) * 100.0 if total_tiles > 0 else 0.0
+    mean_risk = float(np.nanmean(risk)) if risk.size > 0 else 0.0
+
+    # Compute building <-> water proximity using dilation buffer (pixel-based)
+    # Determine buffer_pixels
+    if pixel_size_meters and pixel_size_meters > 0:
+        buffer_pixels = max(1, int(round(buffer_meters / pixel_size_meters)))
+    else:
+        # default buffer in pixels if no georef provided
+        buffer_pixels = max(3, int(round(tile_size * 0.02)))  # e.g., ~5 px for 256 tiles
+
+    total_buildings, buildings_near_water, buildings_near_water_pct = compute_buildings_near_water(
+        building, water, buffer_pixels
+    )
+
+    # Road missing flag
+    total_pixels = h * w
+    road_pixel_count = int(np.sum(road > 0.5))
+    roads_missing = (road_pixel_count / total_pixels) < 0.005  # threshold 0.5%
+
+    # Build summary and flags
+    risk_summary: Dict[str, Any] = {
+        "mean_risk": round(mean_risk, 6),
+        "high_risk_tile_pct": round(high_risk_tile_pct, 2),
+        "total_tiles": total_tiles,
+        "total_building_components": total_buildings,
+        "buildings_near_water": int(buildings_near_water),
+        "buildings_near_water_pct": round(buildings_near_water_pct, 2),
+        "road_pixel_count": int(road_pixel_count)
+    }
+
+    risk_flags: List[str] = []
+    if roads_missing:
+        risk_flags.append("roads_missing")
+    if high_risk_tile_pct >= 10.0:  # if >=10% tiles high risk
+        risk_flags.append("high_flood_exposure")
+    if (np.sum(building) / total_pixels) >= 0.20:
+        risk_flags.append("overbuilt_area")
+
+    return risk, tiles, risk_summary, risk_flags

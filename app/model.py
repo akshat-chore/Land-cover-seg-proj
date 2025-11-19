@@ -107,7 +107,7 @@ class SegmentationModel:
         patches = patchify(image_padded, (patch_size, patch_size, 3), step=step_size)
         
         # Handle edge case where image is smaller than patch size
-        if patches.ndim == 5:
+        if patches.ndim == 6:
             patches = patches[:, :, 0, :, :, :]
         
         mask_patches = np.zeros(patches.shape[:-1], dtype=np.uint8)
