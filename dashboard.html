@@ -1,63 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Google Fonts for Pairing B -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Land-Cover Segmentation — Classic</title>
+
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <!-- ADD THESE LEAFLET LINES -->
+    <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Land-Cover Segmentation — B&amp;W</title>
     <style>
-        /* Classic premium black & white theme */
         :root{
-            --bg: #c8c8c8;  /* deeper grey */  /* darker premium grey */  /* deeper premium grey */  /* soft premium grey */            /* page background */
-            --card: #d4d4d4;  /* deeper card grey */  /* darker card grey */  /* refined mid-grey card */  /* slightly lighter grey for card */          /* panel background */
-            --muted: #6b6b6b;        /* secondary text */
-            --text: #111111;         /* primary text */
-            --accent: #000000;       /* black accent */
-            --border: #e6e6e6;       /* subtle border */
-            --shadow: rgba(0,0,0,0.06);
+            --accent:#2563eb;
+            --border:#e5e7eb;
+            --muted:#6b7280;
+            --text:#111827;
+            --bg:#f9fafb;
         }
-        *{box-sizing:border-box;margin:0;padding:0}
-        html,body{height:100%}
-        body{ background:var(--bg); color:var(--text); font-family: 'Merriweather', Georgia, serif;
-            padding:28px;
-            -webkit-font-smoothing:antialiased;
-            -moz-osx-font-smoothing:grayscale;
+
+        *{box-sizing:border-box;}
+
+        body{
+            margin:0;
+            font-family:'Montserrat','Helvetica Neue',Arial,sans-serif;
+            background:var(--bg);
+            color:var(--text);
         }
+
         .container{
-            max-width:1200px;margin:0 auto;background:var(--card);border-radius:4px;border:1px solid var(--border);box-shadow:0 10px 30px var(--shadow);overflow:hidden;
+            max-width:1120px;
+            margin:32px auto;
+            padding:0 16px 48px;
         }
+
         header{
-            background:linear-gradient(180deg, #000000 0%, #111111 100%);
-            color:#ffffff;padding:32px 40px;border-bottom:1px solid rgba(255,255,255,0.06);
+            margin-bottom:24px;
         }
-        header h1{font-size:26px;font-weight:600;letter-spacing:0.6px;font-family:'Montserrat','Helvetica Neue',Arial,sans-serif}
-        header p{color:rgba(255,255,255,0.85);margin-top:6px;font-size:14px}
 
-        .content{display:grid;grid-template-columns:1fr 1fr;gap:28px;padding:36px}
-        @media(max-width:900px){.content{grid-template-columns:1fr;padding:20px}}
+        header h1{
+            margin:0 0 4px;
+            font-family:'Merriweather','Georgia',serif;
+            font-size:24px;
+        }
 
-        h2.section-title{font-family:'Montserrat','Helvetica Neue',Arial,sans-serif;font-size:18px;margin-bottom:14px;color:var(--accent)}
+        header p{
+            margin:0;
+            color:var(--muted);
+            font-size:14px;
+        }
+
+        .content{
+            display:grid;
+            grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);
+            gap:24px;
+            align-items:flex-start;
+        }
+
+        @media(max-width:900px){
+            .content{
+                grid-template-columns:1fr;
+            }
+        }
+
+        h2.section-title{
+            font-family:'Montserrat','Helvetica Neue',Arial,sans-serif;
+            font-size:18px;
+            margin-bottom:14px;
+            color:var(--accent);
+        }
 
         /* upload box */
         .upload-section{display:flex;flex-direction:column}
-        .upload-box{border:1px dashed var(--border);border-radius:4px;padding:34px;text-align:center;cursor:pointer;background:transparent;transition:all .18s ease}
-        .upload-box:hover{box-shadow:0 6px 18px rgba(0,0,0,0.04);transform:translateY(-2px)}
+        .upload-box{
+            border:1px dashed var(--border);
+            border-radius:4px;
+            padding:34px;
+            text-align:center;
+            cursor:pointer;
+            background:transparent;
+            transition:all .18s ease
+        }
+        .upload-box:hover{
+            box-shadow:0 6px 18px rgba(0,0,0,0.04);
+            transform:translateY(-2px)
+        }
         .upload-box p{color:var(--muted);font-size:14px;margin-bottom:10px}
-        .upload-btn{background:var(--accent);color:#fff;padding:10px 22px;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-family:inherit}
+        .upload-btn{
+            background:var(--accent);
+            color:#fff;
+            padding:10px 22px;
+            border:none;
+            border-radius:4px;
+            cursor:pointer;
+            font-weight:600;
+            font-family:inherit
+        }
         .upload-btn:hover{opacity:0.9}
 
-        #imagePreview{max-width:100%;max-height:320px;margin-top:18px;border-radius:4px;display:none;border:1px solid var(--border)}
+        #imagePreview{
+            max-width:100%;
+            max-height:320px;
+            margin-top:18px;
+            border-radius:4px;
+            display:none;
+            border:1px solid var(--border)
+        }
         #imageName{margin-top:12px;font-weight:600;color:var(--text)}
 
         /* results */
         .results-section{display:flex;flex-direction:column}
-        .results-box{background:transparent;border-radius:4px;padding:20px;border:1px solid var(--border);display:none}
+        .results-box{
+            background:transparent;
+            border-radius:4px;
+            padding:20px;
+            border:1px solid var(--border);
+            display:none
+        }
         .results-box.show{display:block}
         .results-box h2{font-size:18px;margin-bottom:12px}
         .result-item{padding:12px 0;border-bottom:1px solid var(--border)}
@@ -70,57 +131,143 @@
         .mask-canvas{position:absolute;left:0;top:0;pointer-events:none;border-radius:6px}
 
         .toggle-group{display:flex;gap:10px;margin-top:12px}
-        .btn-toggle{padding:8px 12px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;font-weight:600}
+        .btn-toggle{
+            padding:8px 12px;
+            border-radius:4px;
+            border:1px solid var(--border);
+            background:transparent;
+            color:var(--text);
+            cursor:pointer;
+            font-weight:600
+        }
         .btn-toggle.active{background:var(--accent);color:#fff}
 
         .loading{display:none;text-align:center;padding:18px;color:var(--muted)}
         .loading.show{display:block}
-        .spinner{border:4px solid var(--border);border-top:4px solid var(--accent);border-radius:50%;width:36px;height:36px;animation:spin 1s linear infinite;margin:0 auto 12px}
+        .spinner{
+            border:4px solid var(--border);
+            border-top:4px solid var(--accent);
+            border-radius:50%;
+            width:36px;
+            height:36px;
+            animation:spin 1s linear infinite;
+            margin:0 auto 12px
+        }
         @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 
-        .error{display:none;background:#fff5f5;border:1px solid #f1c0c0;color:#9a2323;padding:12px;border-radius:4px;margin-top:12px}
+        .error{
+            display:none;
+            background:#fff5f5;
+            border:1px solid #f1c0c0;
+            color:#9a2323;
+            padding:12px;
+            border-radius:4px;
+            margin-top:12px
+        }
         .error.show{display:block}
-        .success{display:none;background:#f5fff7;border:1px solid #cfead8;color:#1b6b3a;padding:12px;border-radius:4px;margin-top:12px}
+        .success{
+            display:none;
+            background:#f5fff7;
+            border:1px solid #cfead8;
+            color:#1b6b3a;
+            padding:12px;
+            border-radius:4px;
+            margin-top:12px
+        }
         .success.show{display:block}
 
-        .class-stats{margin-top:12px;background:transparent;padding:12px;border-radius:6px}
+        .class-stats{
+            margin-top:12px;
+            background:transparent;
+            padding:12px;
+            border-radius:6px;
+            border:1px solid var(--border);
+        }
         .class-stats h3{font-size:15px;margin-bottom:8px}
-        .stat-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+        .stat-row{
+            display:flex;
+            justify-content:space-between;
+            padding:8px 0;
+            border-bottom:1px solid var(--border)
+        }
         .stat-row:last-child{border-bottom:none}
         .stat-name{color:var(--muted);font-weight:600}
         .stat-value{color:var(--text);font-weight:700}
 
-        .button-group{display:flex;gap:10px;margin-top:18px}
-        .btn-secondary{background:transparent;border:1px solid var(--accent);color:var(--accent);padding:10px 18px;border-radius:4px;cursor:pointer;font-weight:700}
+        .button-group{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+        .btn-secondary{
+            background:transparent;
+            border:1px solid var(--accent);
+            color:var(--accent);
+            padding:10px 18px;
+            border-radius:4px;
+            cursor:pointer;
+            font-weight:700;
+            font-size:13px;
+        }
         .btn-secondary:hover{background:var(--accent);color:#fff}
-        /* ADD THIS */
-.btn-secondary:disabled{
-    opacity:0.5;
-    cursor:not-allowed;
-    background:transparent;
-    color:var(--muted);
-}
-.btn-secondary:disabled:hover{
-    background:transparent;
-    color:var(--muted);
-}
 
+        .btn-secondary:disabled{
+            opacity:0.5;
+            cursor:not-allowed;
+            background:transparent;
+            color:var(--muted);
+        }
+        .btn-secondary:disabled:hover{
+            background:transparent;
+            color:var(--muted);
+        }
 
-        .report-panel{display:none;margin:0;padding:28px;background:transparent}
+        .report-panel{
+            display:none;
+            margin:24px 0 0;
+            padding:28px;
+            background:transparent;
+            border-radius:4px;
+            border:1px solid var(--border);
+        }
         .report-panel.show{display:block}
 
-        .report-card{padding:18px;border-radius:4px;border-left:4px solid #000;background:transparent}
+        .report-card{
+            padding:18px;
+            border-radius:4px;
+            border-left:4px solid #000;
+            background:transparent;
+            border:1px solid var(--border);
+        }
         .report-card h3{margin-bottom:10px}
-        .report-card p, .report-card ul{color:var(--muted);line-height:1.5}
+        .report-card p, .report-card ul{color:var(--muted);line-height:1.5;font-size:14px;}
 
-        .progress-container{display:none;margin-top:12px;padding:12px;border-radius:4px;border:1px solid var(--border)}
+        .progress-container{
+            display:none;
+            margin-top:12px;
+            padding:12px;
+            border-radius:4px;
+            border:1px solid var(--border)
+        }
         .progress-container.show{display:block}
-        .progress-bar{width:100%;height:8px;background:transparent;border-radius:4px;border:1px solid var(--border);overflow:hidden}
-        .progress-fill{height:100%;background:var(--accent);width:0%;transition:width .25s ease}
-        .progress-label{display:flex;justify-content:space-between;color:var(--muted);font-size:13px}
+        .progress-bar{
+            width:100%;
+            height:8px;
+            background:transparent;
+            border-radius:4px;
+            border:1px solid var(--border);
+            overflow:hidden
+        }
+        .progress-fill{
+            height:100%;
+            background:var(--accent);
+            width:0%;
+            transition:width .25s ease
+        }
+        .progress-label{
+            display:flex;
+            justify-content:space-between;
+            color:var(--muted);
+            font-size:13px
+        }
         .progress-time{color:var(--muted);font-size:12px;margin-top:6px}
 
-        /* compact helpers */
         .small {font-size:13px;color:var(--muted)}
     </style>
 </head>
@@ -175,20 +322,33 @@
             </div>
         </div>
 
-    <!-- Map Panel (NEW) -->
-<div class="report-panel" id="mapPanel">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-        <h2 style="margin:0;font-family: 'Georgia', serif">Geographic View</h2>
-        <button class="btn-secondary" onclick="closeMap()">Hide Map ✕</button>
-    </div>
-    <div id="map" style="height:600px;width:100%;border-radius:4px;border:1px solid var(--border)"></div>
-    <div style="margin-top:12px;color:var(--muted);font-size:13px">
-        <strong>Legend:</strong> 
-        <span style="color:#2ecc71">● Low Risk</span> | 
-        <span style="color:#f1c40f">● Medium Risk</span> | 
-        <span style="color:#e74c3c">● High Risk</span>
-    </div>
-</div>
+        <!-- Map Panel: Tile Risk Map -->
+        <div class="report-panel" id="mapPanel">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+                <h2 style="margin:0;font-family: 'Georgia', serif">Geographic View (Risk Tiles)</h2>
+                <button class="btn-secondary" onclick="closeMap()">Hide Map ✕</button>
+            </div>
+            <div id="map" style="height:600px;width:100%;border-radius:4px;border:1px solid var(--border)"></div>
+            <div style="margin-top:12px;color:var(--muted);font-size:13px">
+                <strong>Legend:</strong> 
+                <span style="color:#2ecc71">● Low Risk</span> | 
+                <span style="color:#f1c40f">● Medium Risk</span> | 
+                <span style="color:#e74c3c">● High Risk</span> | 
+                <span style="color:#3498db">● Flood Simulation</span>
+            </div>
+        </div>
+
+        <!-- Map Panel: Flood Animation -->
+        <div class="report-panel" id="floodMapPanel" style="margin-top:32px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+                <h2 style="margin:0;font-family: 'Georgia', serif">Flood Simulation Map</h2>
+                <button class="btn-secondary" onclick="closeFloodMap()">Hide Flood Map ✕</button>
+            </div>
+            <div id="floodMap" style="height:600px;width:100%;border-radius:4px;border:1px solid var(--border)"></div>
+            <div style="margin-top:12px;color:var(--muted);font-size:13px">
+                <strong>Flood GIF overlayed on AOI bounds.</strong>
+            </div>
+        </div>
 
         <div class="report-panel" id="reportPanel">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
@@ -212,13 +372,12 @@
     </div>
 
     <script>
-        // NOTE: Core JavaScript kept the same as original file but colors/DOM remain compatible.
         const API_URL = 'http://127.0.0.1:8000';
         let lastPredictionData = null;
         let progressInterval = null;
         let reportProgressInterval = null;
 
-        function startProgressSimulation(duration = 10000) {
+        function startProgressSimulation(duration = 4000) {
             let startTime = Date.now();
             const progressFill = document.getElementById('progressFill');
             const progressPercent = document.getElementById('progressPercent');
@@ -276,24 +435,46 @@
             if (reportProgressInterval) clearInterval(reportProgressInterval);
             const progressFill = document.getElementById('reportProgressFill');
             const progressPercent = document.getElementById('reportProgressPercent');
+            const progressTime = document.getElementById('reportProgressTime');
             progressFill.style.width = '100%';
             progressPercent.textContent = '100%';
+            progressTime.textContent = 'Complete!';
         }
 
-        function closeReport(){ document.getElementById('reportPanel').classList.remove('show'); }
+        function closeReport(){
+            document.getElementById('reportPanel').classList.remove('show');
+        }
 
+        // File input + drag/drop
         document.getElementById('imageInput').addEventListener('change', handleFileSelect);
 
         const uploadBox = document.querySelector('.upload-box');
-        uploadBox.addEventListener('dragover',(e)=>{ e.preventDefault(); uploadBox.style.boxShadow='0 10px 30px rgba(0,0,0,0.04)'; });
-        uploadBox.addEventListener('dragleave',()=>{ uploadBox.style.boxShadow='none'; });
-        uploadBox.addEventListener('drop',(e)=>{ e.preventDefault(); uploadBox.style.boxShadow='none'; const files = e.dataTransfer.files; if(files.length>0){ document.getElementById('imageInput').files = files; handleFileSelect(); } });
+        uploadBox.addEventListener('dragover',(e)=>{
+            e.preventDefault();
+            uploadBox.style.boxShadow='0 10px 30px rgba(0,0,0,0.04)';
+        });
+        uploadBox.addEventListener('dragleave',()=>{
+            uploadBox.style.boxShadow='none';
+        });
+        uploadBox.addEventListener('drop',(e)=>{
+            e.preventDefault();
+            uploadBox.style.boxShadow='none';
+            const files = e.dataTransfer.files;
+            if(files.length>0){
+                document.getElementById('imageInput').files = files;
+                handleFileSelect();
+            }
+        });
 
         function handleFileSelect(){
             const file = document.getElementById('imageInput').files[0];
             if(!file) return;
             const reader = new FileReader();
-            reader.onload = (e)=>{ const preview = document.getElementById('imagePreview'); preview.src = e.target.result; preview.style.display='block'; };
+            reader.onload = (e)=>{
+                const preview = document.getElementById('imagePreview');
+                preview.src = e.target.result;
+                preview.style.display='block';
+            };
             reader.readAsDataURL(file);
             document.getElementById('imageName').textContent = '✓ Selected: ' + file.name;
             processImage(file);
@@ -311,18 +492,38 @@
             startProgressSimulation(10000);
 
             try{
-                const formData = new FormData(); formData.append('image', file);
-                const response = await fetch(`${API_URL}/predict`,{ method:'POST', body: formData, mode: 'cors'});
+                const formData = new FormData();
+                formData.append('image', file);
+                const response = await fetch(`${API_URL}/predict`,{
+                    method:'POST',
+                    body: formData,
+                    mode: 'cors'
+                });
                 if(!response.ok) throw new Error(`API error: ${response.status}`);
                 const data = await response.json();
-                if(data.success){ completeProgress(); displayResults(data); showSuccess('Image processed successfully!'); } else { showError('Failed to process image'); }
-            } catch(err){ console.error(err); showError('Error: '+err.message); }
-            finally{ document.getElementById('inferenceProgress').classList.remove('show'); }
+                if(data.success){
+                    completeProgress();
+                    displayResults(data);
+                    showSuccess('Image processed successfully!');
+                } else {
+                    showError('Failed to process image');
+                }
+            } catch(err){
+                console.error(err);
+                showError('Error: '+err.message);
+            } finally{
+                document.getElementById('inferenceProgress').classList.remove('show');
+            }
         }
 
         function displayResults(data){
             lastPredictionData = data;
             const riskSummaryHtml = renderRiskSummary(data.risk_summary, data.risk_flags);
+            const floodHtml = renderFloodSection(data.flood_metrics, data.flood_gif_base64);
+            const equityHtml = renderEquitySection(data.equity_summary, data.equity_tiles);
+            const responsePlanHtml = renderResponsePlan(data.response_plan);
+
+
             const html = `
                 <h2>Analysis Results</h2>
 
@@ -366,19 +567,41 @@
                     ${riskSummaryHtml}
                 </div>
 
+                ${equityHtml}
+
+                ${floodHtml}
+
+                ${responsePlanHtml}
+
                 ${renderClassStatistics(data.class_statistics)}
 
                 <div class="button-group">
-    <button class="btn-secondary" onclick="downloadResults('${JSON.stringify(data).replace(/"/g,'&quot;')}')">Download Results</button>
-    <button class="btn-secondary" onclick="generateReport()">Generate AI Report</button>
-    <button class="btn-secondary" onclick="showMap()" id="mapBtn" ${data.has_geo ? '' : 'disabled'}>
-        ${data.has_geo ? '🗺️ View on Map' : '🗺️ No Geo Data'}
-    </button>
-</div>
+                    <button class="btn-secondary" onclick="downloadResults('${JSON.stringify(data).replace(/"/g,'&quot;')}')">
+                        Download Results
+                    </button>
+                    <button class="btn-secondary" onclick="generateReport()">Generate AI Report</button>
+                    <button class="btn-secondary" onclick="showMap()" id="mapBtn" ${data.has_geo ? '' : 'disabled'}>
+                        ${data.has_geo ? '🗺️ View on Map' : '🗺️ No Geo Data'}
+                    </button>
+                    <button
+                        class="btn-secondary"
+                        id="showFloodMapBtn"
+                        style="display:${data.flood_gif_base64 && data.geo_bounds ? 'inline-block' : 'none'};"
+                        ${data.flood_gif_base64 && data.geo_bounds ? '' : 'disabled'}>
+                        Show Flood Simulation Map
+                    </button>
+                </div>
             `;
 
             document.getElementById('resultsContent').innerHTML = html;
             document.getElementById('resultsBox').classList.add('show');
+
+            // Wire flood map button if available
+            const showFloodMapBtn = document.getElementById('showFloodMapBtn');
+            if (showFloodMapBtn && data.flood_gif_base64 && data.geo_bounds) {
+                showFloodMapBtn.addEventListener('click', showFloodMap);
+            }
+
             setupOverlayToggleAndCanvas(data);
         }
 
@@ -400,7 +623,214 @@
             `;
         }
 
+        // Infrastructure Equity / Deficit section
+        // Infrastructure Equity / Deficit section
+function renderEquitySection(equitySummary, equityTiles){
+    if (!equityTiles || !Array.isArray(equityTiles) || equityTiles.length === 0) {
+        return '';
+    }
+
+    // Small helper to format numbers safely
+    function fmtNum(v, digits = 1, suffix = '') {
+        if (typeof v !== 'number' || Number.isNaN(v)) return 'N/A';
+        return v.toFixed(digits) + suffix;
+    }
+
+    let html = '<div class="class-stats"><h3>Infrastructure Equity (Deficit)</h3>';
+
+    // ===== Summary block =====
+    if (equitySummary) {
+        const meanDeficit = (typeof equitySummary.mean_deficit_score === 'number')
+            ? equitySummary.mean_deficit_score.toFixed(2)
+            : 'N/A';
+
+        const totalTiles = equitySummary.total_tiles ?? equityTiles.length;
+        const urgentTiles = equitySummary.urgent_tiles ?? equitySummary.num_urgent ?? null;
+        const importantTiles = equitySummary.important_tiles ?? equitySummary.num_important ?? null;
+        const adequateTiles = equitySummary.adequate_tiles ?? equitySummary.num_adequate ?? null;
+
+        html += `
+            <div class="stat-row">
+                <span class="stat-name">Mean Deficit Score</span>
+                <span class="stat-value">${meanDeficit}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-name">Total Tiles</span>
+                <span class="stat-value">${totalTiles}</span>
+            </div>
+        `;
+
+        if (urgentTiles !== null) {
+            html += `
+                <div class="stat-row">
+                    <span class="stat-name">Urgent Priority Tiles</span>
+                    <span class="stat-value">${urgentTiles}</span>
+                </div>
+            `;
+        }
+        if (importantTiles !== null) {
+            html += `
+                <div class="stat-row">
+                    <span class="stat-name">Important Priority Tiles</span>
+                    <span class="stat-value">${importantTiles}</span>
+                </div>
+            `;
+        }
+        if (adequateTiles !== null) {
+            html += `
+                <div class="stat-row">
+                    <span class="stat-name">Adequate Priority Tiles</span>
+                    <span class="stat-value">${adequateTiles}</span>
+                </div>
+            `;
+        }
+    }
+
+    // ===== Top N high-deficit tiles =====
+    const sortedTiles = [...equityTiles].sort((a, b) => {
+        const da = (typeof a.deficit_score === 'number') ? a.deficit_score : 0;
+        const db = (typeof b.deficit_score === 'number') ? b.deficit_score : 0;
+        return db - da;
+    }).slice(0, 6); // show top 6 tiles
+
+    html += `
+        <div style="margin-top:10px;">
+            <strong>Top High-Deficit Tiles</strong>
+        </div>
+    `;
+
+    sortedTiles.forEach(tile => {
+        const id = tile.tile_id ?? '-';
+        const score = (typeof tile.deficit_score === 'number')
+            ? tile.deficit_score.toFixed(2)
+            : 'N/A';
+        const priority = (tile.priority_level ?? 'N/A').toUpperCase();
+
+        const bld = fmtNum(tile.building_density_pct, 1, '%');
+        const road = fmtNum(tile.road_coverage_pct, 1, '%');
+        const green = fmtNum(tile.green_space_pct, 1, '%');
+
+        const lat = (typeof tile.lat === 'number') ? tile.lat.toFixed(5) : 'N/A';
+        const lon = (typeof tile.lon === 'number') ? tile.lon.toFixed(5) : 'N/A';
+
+        html += `
+            <div class="stat-row">
+                <span class="stat-name">
+                    Tile ${id} (${priority}) — Deficit: ${score}
+                </span>
+                <span class="stat-value">
+                    🏙 Bldg: ${bld} &nbsp;|&nbsp; 🛣 Road: ${road} &nbsp;|&nbsp; 🌳 Green: ${green}
+                    <br/><span class="small">📍 ${lat}, ${lon}</span>
+                </span>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    return html;
+}
+
+        
+        // Flood simulation summary + GIF in results panel
+        function renderFloodSection(floodMetrics, floodGifBase64){
+            if(!floodMetrics && !floodGifBase64) return '';
+
+            let html = '<div class="class-stats"><h3>Flood Impact Simulation</h3>';
+
+            if(floodMetrics){
+                const impactRatio = (typeof floodMetrics.impact_ratio === 'number')
+                    ? floodMetrics.impact_ratio.toFixed(1) + '%'
+                    : 'N/A';
+                const totalBuildings = (typeof floodMetrics.total_buildings === 'number')
+                    ? floodMetrics.total_buildings.toLocaleString()
+                    : 'N/A';
+                const floodedBuildings = (typeof floodMetrics.flooded_buildings === 'number')
+                    ? floodMetrics.flooded_buildings.toLocaleString()
+                    : 'N/A';
+                const status = floodMetrics.status || 'N/A';
+
+                html += `
+                    <div class="stat-row">
+                        <span class="stat-name">Impact Ratio (flooded / total buildings)</span>
+                        <span class="stat-value">${impactRatio}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Total Buildings</span>
+                        <span class="stat-value">${totalBuildings}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Flooded Buildings</span>
+                        <span class="stat-value">${floodedBuildings}</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">Status</span>
+                        <span class="stat-value">${status}</span>
+                    </div>
+                `;
+            }
+
+            if(floodGifBase64){
+                const gifSrc = 'data:image/gif;base64,' + floodGifBase64;
+                html += `
+                    <div class="mask-container" style="margin-top:12px;">
+                        <h3 style="margin-bottom:8px;font-size:15px">Flood Progression Animation</h3>
+                        <img src="${gifSrc}" alt="Flood Simulation Animation" />
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+            // Disaster Response Deployment Plan section
+            function renderResponsePlan(plan){
+                if(!plan || !Array.isArray(plan) || plan.length === 0){
+                    return '';
+                }
+
+                let html = '<div class="class-stats"><h3>Disaster Response Deployment Plan</h3>';
+                html += `
+                    <div class="stat-row">
+                        <span class="stat-name">Total Target Tiles</span>
+                        <span class="stat-value">${plan.length}</span>
+                    </div>
+                `;
+
+                html += `
+                    <div style="margin-top:10px;">
+                        <strong>Priority Tasks (Top 6 tiles)</strong>
+                    </div>
+                `;
+
+                plan.slice(0, 6).forEach(item => {
+                    const tileId = item.tile_id ?? '-';
+                    const priority = item.priority ?? 'N/A';
+                    const riskLevel = item.risk_level ?? 'N/A';
+                    const window = item.recommended_window ?? 'N/A';
+                    const action = item.recommended_action ?? 'N/A';
+                    const lat = (typeof item.lat === 'number') ? item.lat.toFixed(5) : 'N/A';
+                    const lon = (typeof item.lon === 'number') ? item.lon.toFixed(5) : 'N/A';
+
+                    html += `
+                        <div class="stat-row">
+                            <span class="stat-name">
+                                Tile ${tileId} (${priority.toUpperCase()}, risk: ${riskLevel})
+                            </span>
+                            <span class="stat-value">
+                                ${window} – ${action}
+                                <br/><span class="small">📍 ${lat}, ${lon}</span>
+                            </span>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                return html;
+            }
+
         function renderClassStatistics(stats){
+            if(!stats) return '';
             let html = '<div class="class-stats"><h3>Class Statistics</h3>';
             html += '<div style="margin-bottom: 12px;"><strong>Total Pixels:</strong> ' + (stats.total_pixels ? stats.total_pixels.toLocaleString() : 'N/A') + '</div>';
             if(stats.per_class_pixels){
@@ -408,17 +838,42 @@
                 for(const [cls,count] of Object.entries(stats.per_class_pixels)){
                     const pct = stats.per_class_percentages && stats.per_class_percentages[cls] ? stats.per_class_percentages[cls] : 0;
                     const area = stats.per_class_area_km2 ? stats.per_class_area_km2[cls] : 'N/A';
-                    html += `\n                        <div class=\"stat-row\">\n                            <span class=\"stat-name\">${cls}</span>\n                            <span class=\"stat-value\">${count.toLocaleString()} pixels (${pct}%) - ${area} km²</span>\n                        </div>`;
+                    html += `
+                        <div class="stat-row">
+                            <span class="stat-name">${cls}</span>
+                            <span class="stat-value">${count.toLocaleString()} pixels (${pct}%) - ${area} km²</span>
+                        </div>`;
                 }
             }
             html += '</div>';
             return html;
         }
 
-        function showError(message){ const el = document.getElementById('error'); el.innerHTML = '✖ ' + message; el.classList.add('show'); }
-        function showSuccess(message){ const el = document.getElementById('success'); el.innerHTML = '✔ ' + message; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),4000); }
+        function showError(message){
+            const el = document.getElementById('error');
+            el.innerHTML = '✖ ' + message;
+            el.classList.add('show');
+        }
+        function showSuccess(message){
+            const el = document.getElementById('success');
+            el.innerHTML = '✔ ' + message;
+            el.classList.add('show');
+            setTimeout(()=>el.classList.remove('show'),4000);
+        }
 
-        function downloadResults(data){ const results = JSON.parse(data.replace(/&quot;/g,'"')); const json = JSON.stringify(results,null,2); const blob = new Blob([json],{type:'application/json'}); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'segmentation_results.json'; document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); document.body.removeChild(a); }
+        function downloadResults(data){
+            const results = JSON.parse(data.replace(/&quot;/g,'"'));
+            const json = JSON.stringify(results,null,2);
+            const blob = new Blob([json],{type:'application/json'});
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'segmentation_results.json';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
 
         function setupOverlayToggleAndCanvas(data){
             const overlayBtn = document.getElementById('overlayBtn');
@@ -429,40 +884,79 @@
             overlayImg.onload = () => {
                 const dispW = overlayImg.clientWidth;
                 const dispH = overlayImg.clientHeight;
-                riskCanvas.width = dispW; riskCanvas.height = dispH;
-                riskCanvas.style.width = dispW + 'px'; riskCanvas.style.height = dispH + 'px';
-                riskCanvas.style.left = overlayImg.offsetLeft + 'px'; riskCanvas.style.top = overlayImg.offsetTop + 'px';
-                if(data.risk_tiles && Array.isArray(data.risk_tiles) && data.risk_tiles.length>0) renderRiskOverlay(data, riskCanvas, overlayImg);
+                riskCanvas.width = dispW;
+                riskCanvas.height = dispH;
+                riskCanvas.style.width = dispW + 'px';
+                riskCanvas.style.height = dispH + 'px';
+                riskCanvas.style.left = overlayImg.offsetLeft + 'px';
+                riskCanvas.style.top = overlayImg.offsetTop + 'px';
+                if(data.risk_tiles && Array.isArray(data.risk_tiles) && data.risk_tiles.length>0)
+                    renderRiskOverlay(data, riskCanvas, overlayImg);
             };
 
-            overlayBtn.onclick = ()=>{ overlayBtn.classList.add('active'); riskBtn.classList.remove('active'); riskCanvas.style.display='none'; document.getElementById('overlayImg').style.opacity = 1.0; };
-            riskBtn.onclick = ()=>{ overlayBtn.classList.remove('active'); riskBtn.classList.add('active'); riskCanvas.style.display='block'; document.getElementById('overlayImg').style.opacity = 0.6; };
+            overlayBtn.onclick = ()=>{
+                overlayBtn.classList.add('active');
+                riskBtn.classList.remove('active');
+                riskCanvas.style.display='none';
+                document.getElementById('overlayImg').style.opacity = 1.0;
+            };
+            riskBtn.onclick = ()=>{
+                overlayBtn.classList.remove('active');
+                riskBtn.classList.add('active');
+                riskCanvas.style.display='block';
+                document.getElementById('overlayImg').style.opacity = 0.6;
+            };
             overlayBtn.click();
         }
 
         function renderRiskOverlay(data, canvas, overlayImg){
-            const ctx = canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width,canvas.height);
-            const maskH = data.mask_shape[0]; const maskW = data.mask_shape[1];
-            const scaleX = canvas.width / maskW; const scaleY = canvas.height / maskH;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            const maskH = data.mask_shape[0];
+            const maskW = data.mask_shape[1];
+            const scaleX = canvas.width / maskW;
+            const scaleY = canvas.height / maskH;
             for(const tile of (data.risk_tiles||[])){
-                const x = tile.x * scaleX; const y = tile.y * scaleY; const w = tile.w * scaleX; const h = tile.h * scaleY;
+                const x = tile.x * scaleX;
+                const y = tile.y * scaleY;
+                const w = tile.w * scaleX;
+                const h = tile.h * scaleY;
                 const score = Math.max(0, Math.min(1, tile.risk_score));
                 const color = riskScoreToRGBA(score, 0.55);
-                ctx.fillStyle = color; ctx.fillRect(x,y,w,h);
-                if(tile.risk_level === 'high'){ ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1; ctx.strokeRect(x+0.5,y+0.5,w-1,h-1); }
+                ctx.fillStyle = color;
+                ctx.fillRect(x,y,w,h);
+                if(tile.risk_level === 'high'){
+                    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x+0.5,y+0.5,w-1,h-1);
+                }
             }
         }
 
         function riskScoreToRGBA(score, alpha=0.55){
-            const green=[46,204,113]; const yellow=[241,196,15]; const red=[231,76,60];
+            const green=[46,204,113];
+            const yellow=[241,196,15];
+            const red=[231,76,60];
             let r,g,b;
-            if(score<=0.5){ const t = score / 0.5; r = Math.round(green[0] + (yellow[0]-green[0])*t); g = Math.round(green[1] + (yellow[1]-green[1])*t); b = Math.round(green[2] + (yellow[2]-green[2])*t); }
-            else{ const t = (score-0.5)/0.5; r = Math.round(yellow[0] + (red[0]-yellow[0])*t); g = Math.round(yellow[1] + (red[1]-yellow[1])*t); b = Math.round(yellow[2] + (red[2]-yellow[2])*t); }
+            if(score<=0.5){
+                const t = score / 0.5;
+                r = Math.round(green[0] + (yellow[0]-green[0])*t);
+                g = Math.round(green[1] + (yellow[1]-green[1])*t);
+                b = Math.round(green[2] + (yellow[2]-green[2])*t);
+            } else {
+                const t = (score-0.5)/0.5;
+                r = Math.round(yellow[0] + (red[0]-yellow[0])*t);
+                g = Math.round(yellow[1] + (red[1]-yellow[1])*t);
+                b = Math.round(yellow[2] + (red[2]-yellow[2])*t);
+            }
             return `rgba(${r},${g},${b},${alpha})`;
         }
 
         async function generateReport(){
-            if(!lastPredictionData){ showError('No prediction data available. Please upload an image first.'); return; }
+            if(!lastPredictionData){
+                showError('No prediction data available. Please upload an image first.');
+                return;
+            }
             document.getElementById('reportPanel').classList.add('show');
             document.getElementById('reportProgress').classList.add('show');
             document.getElementById('reportContent').innerHTML = '';
@@ -470,136 +964,309 @@
 
             try{
                 const reportRequest = {
-                    metrics_json: { total_pixels: lastPredictionData.class_statistics.total_pixels, per_class_pixels: lastPredictionData.class_statistics.per_class_pixels || {}, per_class_percentages: lastPredictionData.class_statistics.per_class_percentages || {}, per_class_area_km2: lastPredictionData.class_statistics.per_class_area_km2 || {} },
-                    segmentation_summary: { image_shape: lastPredictionData.image_shape, mask_shape: lastPredictionData.mask_shape, inference_time_ms: lastPredictionData.inference_time_ms, unique_classes: lastPredictionData.unique_classes, risk_summary: lastPredictionData.risk_summary || {}, risk_flags: lastPredictionData.risk_flags || [] },
-                    context: { analysis_type: 'land_cover_segmentation', timestamp: lastPredictionData.timestamp, satellite_image: true }
+                    metrics_json: {
+                        total_pixels: lastPredictionData.class_statistics.total_pixels,
+                        per_class_pixels: lastPredictionData.class_statistics.per_class_pixels || {},
+                        per_class_percentages: lastPredictionData.class_statistics.per_class_percentages || {},
+                        per_class_area_km2: lastPredictionData.class_statistics.per_class_area_km2 || {}
+                    },
+                    segmentation_summary: {
+                        image_shape: lastPredictionData.image_shape,
+                        mask_shape: lastPredictionData.mask_shape,
+                        inference_time_ms: lastPredictionData.inference_time_ms,
+                        unique_classes: lastPredictionData.unique_classes,
+                        risk_summary: lastPredictionData.risk_summary || {},
+                        risk_flags: lastPredictionData.risk_flags || [],
+                        flood_metrics: lastPredictionData.flood_metrics || {},
+                        equity_summary: lastPredictionData.equity_summary || {}
+                    },
+                    context: {
+                        analysis_type: 'land_cover_segmentation',
+                        timestamp: lastPredictionData.timestamp,
+                        satellite_image: true
+                    }
                 };
 
-                const response = await fetch(`${API_URL}/report`,{ method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(reportRequest), mode:'cors' });
+                const response = await fetch(`${API_URL}/report`,{
+                    method:'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(reportRequest),
+                    mode:'cors'
+                });
                 if(!response.ok) throw new Error(`API error: ${response.status}`);
                 const reportData = await response.json();
-                if(reportData.success && reportData.report){ completeReportProgress(); displayReportPanel(reportData.report); showSuccess('AI Report generated successfully!'); }
-                else showError('Failed to generate report: '+(reportData.error||'Unknown error'));
-            } catch(err){ console.error(err); showError('Error generating report: '+err.message); }
-            finally{ document.getElementById('reportProgress').classList.remove('show'); }
+                if(reportData.success && reportData.report){
+                    completeReportProgress();
+                    displayReportPanel(reportData.report);
+                    showSuccess('AI Report generated successfully!');
+                } else {
+                    showError('Failed to generate report: '+(reportData.error||'Unknown error'));
+                }
+            } catch(err){
+                console.error(err);
+                showError('Error generating report: '+err.message);
+            } finally{
+                document.getElementById('reportProgress').classList.remove('show');
+            }
         }
 
         function displayReportPanel(report){
             let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">';
-            if(report.executive_summary) html += `<div class="report-card" style="grid-column:1 / -1"><h3>Executive Summary</h3><p>${report.executive_summary}</p></div>`;
-            if(report.urban_planning){ const items = Array.isArray(report.urban_planning) ? report.urban_planning : [report.urban_planning]; html += `<div class="report-card"><h3>Urban Planning</h3>${items.length>1?'<ul>'+items.map(i=>`<li>${i}</li>`).join(''):`<p>${items[0]}</p>`}</div>` }
-            if(report.disaster_management){ const items = Array.isArray(report.disaster_management) ? report.disaster_management : [report.disaster_management]; html += `<div class="report-card"><h3>Disaster Management</h3>${items.length>1?'<ul>'+items.map(i=>`<li>${i}</li>`).join(''):`<p>${items[0]}</p>`}</div>` }
-            if(report.automation_accuracy){ const items = Array.isArray(report.automation_accuracy) ? report.automation_accuracy : [report.automation_accuracy]; html += `<div class="report-card"><h3>Automation & Accuracy</h3>${items.length>1?'<ul>'+items.map(i=>`<li>${i}</li>`).join(''):`<p>${items[0]}</p>`}</div>` }
-            if(report.recommendations){ const recs = report.recommendations; html += `<div class="report-card" style="grid-column:1 / -1"><h3>Recommendations</h3>`; if(recs.model_improvements && recs.model_improvements.length>0) html += '<ul>'+recs.model_improvements.map(i=>`<li>${i}</li>`).join('')+'</ul>'; if(recs.deployment_notes && recs.deployment_notes.length>0) html += '<ul>'+recs.deployment_notes.map(i=>`<li>${i}</li>`).join('')+'</ul>'; html += '</div>' }
+            if(report.executive_summary)
+                html += `<div class="report-card" style="grid-column:1 / -1"><h3>Executive Summary</h3><p>${report.executive_summary}</p></div>`;
+            if(report.urban_planning){
+                const items = Array.isArray(report.urban_planning) ? report.urban_planning : [report.urban_planning];
+                html += `<div class="report-card"><h3>Urban Planning</h3>${
+                    items.length>1?'<ul>'+items.map(i=>`<li>${i}</li>`).join(''):`<p>${items[0]}</p>`
+                }</div>`;
+            }
+            if(report.disaster_management){
+                const items = Array.isArray(report.disaster_management) ? report.disaster_management : [report.disaster_management];
+                html += `<div class="report-card"><h3>Disaster Management</h3>${
+                    items.length>1?'<ul>'+items.map(i=>`<li>${i}</li>`).join(''):`<p>${items[0]}</p>`
+                }</div>`;
+            }
+            if(report.automation_accuracy){
+                const items = Array.isArray(report.automation_accuracy) ? report.automation_accuracy : [report.automation_accuracy];
+                html += `<div class="report-card"><h3>Automation & Accuracy</h3>${
+                    items.length>1?'<ul>'+items.map(i=>`<li>${i}</li>`).join(''):`<p>${items[0]}</p>`
+                }</div>`;
+            }
+            if(report.recommendations){
+                const recs = report.recommendations;
+                html += `<div class="report-card" style="grid-column:1 / -1"><h3>Recommendations</h3>`;
+                if(recs.model_improvements && recs.model_improvements.length>0)
+                    html += '<ul>'+recs.model_improvements.map(i=>`<li>${i}</li>`).join('')+'</ul>';
+                if(recs.deployment_notes && recs.deployment_notes.length>0)
+                    html += '<ul>'+recs.deployment_notes.map(i=>`<li>${i}</li>`).join('')+'</ul>';
+                html += '</div>';
+            }
             html += '</div>';
             document.getElementById('reportContent').innerHTML = html;
         }
 
-    // ============= MAP FUNCTIONALITY =============
-let map = null;
-let riskMarkers = [];
+        // ============= MAP FUNCTIONALITY =============
+        let map = null;
+        let riskMarkers = [];
+        let floodMarkers = [];
+        let floodOverlay = null;
+        let floodMap = null;
+        let floodMapOverlay = null;
 
-function closeMap(){ 
-    document.getElementById('mapPanel').classList.remove('show'); 
-}
+        function closeMap(){
+            document.getElementById('mapPanel').classList.remove('show');
+        }
+        function closeFloodMap(){
+            document.getElementById('floodMapPanel').classList.remove('show');
+        }
 
-function showMap(){
-    if(!lastPredictionData){ 
-        showError('No prediction data available.'); 
-        return; 
-    }
-    
-    if(!lastPredictionData.has_geo){
-        showError('This image does not contain geographic coordinates.');
-        return;
-    }
-    
-    document.getElementById('mapPanel').classList.add('show');
-    
-    // Initialize map if first time
-    if(!map){
-        const center = lastPredictionData.geo_center || [52.0, 19.0]; // Default to Poland center
-        map = L.map('map').setView(center, 13);
-        
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19
-        }).addTo(map);
-        
-        // Add satellite layer option
-        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles © Esri',
-            maxZoom: 19
-        });
-        
-        // Layer control
-        L.control.layers({
-            'Street Map': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }),
-            'Satellite': satellite
-        }).addTo(map);
-    }
-    
-    // Clear existing markers
-    riskMarkers.forEach(m => map.removeLayer(m));
-    riskMarkers = [];
-    
-    // Add boundary rectangle if bounds available
-    if(lastPredictionData.geo_bounds){
-        const bounds = lastPredictionData.geo_bounds;
-        const rectangle = L.rectangle([
-            [bounds[0], bounds[1]], // southwest
-            [bounds[2], bounds[3]]  // northeast
-        ], {
-            color: '#000',
-            weight: 2,
-            fillOpacity: 0.1
-        }).addTo(map);
-        
-        map.fitBounds(rectangle.getBounds());
-    }
-    
-    // Add risk markers
-    if(lastPredictionData.risk_tiles && lastPredictionData.risk_tiles.length > 0){
-        lastPredictionData.risk_tiles.forEach(tile => {
-            if(tile.lat && tile.lon){
-                const color = getRiskColor(tile.risk_score);
-                const marker = L.circleMarker([tile.lat, tile.lon], {
-                    radius: 8,
-                    fillColor: color,
-                    color: '#fff',
-                    weight: 1,
-                    opacity: 1,
-                    fillOpacity: 0.7
-                }).addTo(map);
-                
-                // Popup with details
-                marker.bindPopup(`
-                    <div style="font-family:inherit">
-                        <strong>Tile ${tile.tile_id}</strong><br>
-                        <strong>Risk Level:</strong> ${tile.risk_level}<br>
-                        <strong>Risk Score:</strong> ${tile.risk_score.toFixed(3)}<br>
-                        <strong>Building Ratio:</strong> ${(tile.building_ratio * 100).toFixed(1)}%<br>
-                        <strong>Position:</strong> ${tile.lat.toFixed(5)}, ${tile.lon.toFixed(5)}
-                    </div>
-                `);
-                
-                riskMarkers.push(marker);
+        function showMap(){
+            if(!lastPredictionData){
+                showError('No prediction data available.');
+                return;
             }
-        });
-    }
-    
-    // Refresh map size (important for hidden divs)
-    setTimeout(() => map.invalidateSize(), 100);
-}
 
-function getRiskColor(score){
-    if(score < 0.33) return '#2ecc71'; // green
-    if(score < 0.66) return '#f1c40f'; // yellow
-    return '#e74c3c'; // red
-}
+            if(!lastPredictionData.has_geo){
+                showError('This image does not contain geographic coordinates.');
+                return;
+            }
+
+            document.getElementById('mapPanel').classList.add('show');
+
+            // Initialize map first time
+            if(!map){
+                const center = lastPredictionData.geo_center || [52.0, 19.0]; // default
+                map = L.map('map').setView(center, 13);
+
+                const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(map);
+
+                const satellite = L.tileLayer(
+                    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                    {
+                        attribution: 'Tiles © Esri',
+                        maxZoom: 19
+                    }
+                );
+
+                L.control.layers(
+                    {
+                        'Street Map': street,
+                        'Satellite': satellite
+                    },
+                    {}
+                ).addTo(map);
+            }
+
+            // Clear previous markers & overlay
+            riskMarkers.forEach(m => map.removeLayer(m));
+            riskMarkers = [];
+            floodMarkers.forEach(m => map.removeLayer(m));
+            floodMarkers = [];
+            if(floodOverlay){
+                map.removeLayer(floodOverlay);
+                floodOverlay = null;
+            }
+
+            // Add boundary rectangle if bounds available
+            if(lastPredictionData.geo_bounds){
+                const bounds = lastPredictionData.geo_bounds;
+                const rectangle = L.rectangle([
+                    [bounds[0], bounds[1]], // southwest
+                    [bounds[2], bounds[3]]  // northeast
+                ], {
+                    color: '#000',
+                    weight: 2,
+                    fillOpacity: 0.1
+                }).addTo(map);
+
+                riskMarkers.push(rectangle);
+                map.fitBounds(rectangle.getBounds());
+            }
+
+            // Add risk markers
+            if(lastPredictionData.risk_tiles && lastPredictionData.risk_tiles.length > 0){
+                lastPredictionData.risk_tiles.forEach(tile => {
+                    if(tile.lat && tile.lon){
+                        const color = getRiskColor(tile.risk_score);
+                        const marker = L.circleMarker([tile.lat, tile.lon], {
+                            radius: 8,
+                            fillColor: color,
+                            color: '#fff',
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.7
+                        }).addTo(map);
+
+                        marker.bindPopup(`
+                            <div style="font-family:inherit">
+                                <strong>Tile ${tile.tile_id}</strong><br>
+                                <strong>Risk Level:</strong> ${tile.risk_level}<br>
+                                <strong>Risk Score:</strong> ${tile.risk_score.toFixed(3)}<br>
+                                <strong>Building Ratio:</strong> ${(tile.building_ratio * 100).toFixed(1)}%<br>
+                                <strong>Position:</strong> ${tile.lat.toFixed(5)}, ${tile.lon.toFixed(5)}
+                            </div>
+                        `);
+
+                        riskMarkers.push(marker);
+                    }
+                });
+            }
+
+            // Flood hotspots on map
+            if (lastPredictionData.flood_metrics &&
+                ((typeof lastPredictionData.flood_metrics.flooded_buildings === 'number' &&
+                  lastPredictionData.flood_metrics.flooded_buildings > 0) ||
+                 (lastPredictionData.flood_metrics.status &&
+                  lastPredictionData.flood_metrics.status.toUpperCase().includes('CRITICAL')))
+            ){
+                (lastPredictionData.risk_tiles || []).forEach(tile => {
+                    if(tile.lat && tile.lon && tile.risk_level === 'high'){
+                        const marker = L.circleMarker([tile.lat, tile.lon], {
+                            radius: 9,
+                            fillColor: '#3498db',
+                            color: '#ffffff',
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.85
+                        }).addTo(map);
+
+                        const impactRatio = lastPredictionData.flood_metrics.impact_ratio;
+                        const impactPct = (typeof impactRatio === 'number')
+                            ? (impactRatio * 100).toFixed(1) + '%'
+                            : 'N/A';
+
+                        marker.bindPopup(`
+                            <div style="font-family:inherit">
+                                🌊 <strong>Flood Simulation Hotspot</strong><br>
+                                <strong>Tile:</strong> ${tile.tile_id}<br>
+                                <strong>Risk Level:</strong> ${tile.risk_level}<br>
+                                <strong>Simulated Building Flood Impact:</strong> ${impactPct}<br>
+                                <strong>Coords:</strong> ${tile.lat.toFixed(5)}, ${tile.lon.toFixed(5)}
+                            </div>
+                        `);
+
+                        floodMarkers.push(marker);
+                    }
+                });
+            }
+
+            // Flood GIF overlay over AOI
+            if (lastPredictionData.flood_gif_base64 && lastPredictionData.geo_bounds){
+                const gifUrl = 'data:image/gif;base64,' + lastPredictionData.flood_gif_base64;
+                const bounds = lastPredictionData.geo_bounds;
+                const southWest = [bounds[0], bounds[1]];
+                const northEast = [bounds[2], bounds[3]];
+                const leafletBounds = [southWest, northEast];
+
+                floodOverlay = L.imageOverlay(gifUrl, leafletBounds, {
+                    opacity: 0.7,
+                    interactive: false
+                }).addTo(map);
+            }
+
+            setTimeout(() => map.invalidateSize(), 100);
+        }
+
+        // Show Flood GIF on a separate map panel
+        function showFloodMap(){
+            if(!lastPredictionData){
+                showError('No prediction data available.');
+                return;
+            }
+            if(!lastPredictionData.has_geo || !lastPredictionData.flood_gif_base64 || !lastPredictionData.geo_bounds){
+                showError('Flood GIF or geographic bounds not available.');
+                return;
+            }
+            document.getElementById('floodMapPanel').classList.add('show');
+            // Initialize floodMap first time
+            if(!floodMap){
+                const center = lastPredictionData.geo_center || [52.0, 19.0];
+                floodMap = L.map('floodMap').setView(center, 13);
+                const street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(floodMap);
+                const satellite = L.tileLayer(
+                    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                    {
+                        attribution: 'Tiles © Esri',
+                        maxZoom: 19
+                    }
+                );
+                L.control.layers(
+                    {
+                        'Street Map': street,
+                        'Satellite': satellite
+                    },
+                    {}
+                ).addTo(floodMap);
+            }
+            // Remove previous overlay
+            if(floodMapOverlay){
+                floodMap.removeLayer(floodMapOverlay);
+                floodMapOverlay = null;
+            }
+            // Add GIF overlay
+            const gifUrl = 'data:image/gif;base64,' + lastPredictionData.flood_gif_base64;
+            const bounds = lastPredictionData.geo_bounds;
+            const southWest = [bounds[0], bounds[1]];
+            const northEast = [bounds[2], bounds[3]];
+            const leafletBounds = [southWest, northEast];
+            floodMapOverlay = L.imageOverlay(gifUrl, leafletBounds, {
+                opacity: 0.8,
+                interactive: false
+            }).addTo(floodMap);
+            setTimeout(() => floodMap.invalidateSize(), 100);
+        }
+
+        function getRiskColor(score){
+            if(score < 0.33) return '#2ecc71'; // green
+            if(score < 0.66) return '#f1c40f'; // yellow
+            return '#e74c3c'; // red
+        }
     </script>
 </body>
 </html>
