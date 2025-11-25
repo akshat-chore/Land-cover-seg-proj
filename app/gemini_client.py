@@ -33,15 +33,19 @@ class GeminiClient:
             logger.warning("No GEMINI_API_KEY found in environment variables")
     
     def _build_report_prompt(self, metrics_json: Dict, segmentation_summary: Dict, 
-                            context: Optional[Dict] = None) -> str:
+                            context: Optional[Dict] = None, 
+                            deficit_metrics: Optional[Dict] = None, 
+                            flood_simulation: Optional[Dict] = None) -> str:
         """
         Build a comprehensive prompt for Gemini.
-        
+
         Args:
             metrics_json (Dict): Evaluation metrics from model.
             segmentation_summary (Dict): Summary of segmentation results (areas, percentages).
             context (Optional[Dict]): Additional context (region, date, scenario).
-        
+            deficit_metrics (Optional[Dict]): Metrics related to deficit regions.
+            flood_simulation (Optional[Dict]): Results from flood simulation.
+
         Returns:
             str: Formatted prompt for Gemini.
         
@@ -59,6 +63,12 @@ A semantic segmentation model has been applied to satellite/aerial imagery. Belo
 **Segmentation Summary (Areas & Percentages):**
 {json.dumps(segmentation_summary, indent=2)}
 
+**Deficit Analysis:**
+{json.dumps(deficit_metrics, indent=2) if deficit_metrics else "No deficit metrics provided."}
+
+**Flood Simulation Insights:**
+{json.dumps(flood_simulation, indent=2) if flood_simulation else "No flood simulation data provided."}
+
 **Context Information:**
 {json.dumps(context, indent=2) if context else "No context provided."}
 
@@ -74,6 +84,14 @@ Generate a detailed report in JSON format with the following structure (all fiel
     "disaster_management": [
         "Insight 1 relevant to disaster management",
         "Insight 2 relevant to disaster management"
+    ],
+    "deficit_analysis": [
+        "Insight 1 related to deficit regions",
+        "Insight 2 related to deficit regions"
+    ],
+    "flood_simulation": [
+        "Insight 1 related to flood simulation",
+        "Insight 2 related to flood simulation"
     ],
     "automation_accuracy": [
         "Assessment of model automation readiness",
@@ -104,7 +122,9 @@ Return ONLY the properly formatted JSON."""
         return prompt
     
     async def generate_report(self, metrics_json: Dict, segmentation_summary: Dict, 
-                            context: Optional[Dict] = None) -> Dict:
+                            context: Optional[Dict] = None, 
+                            deficit_metrics: Optional[Dict] = None, 
+                            flood_simulation: Optional[Dict] = None) -> Dict:
         """
         Generate a comprehensive report using Gemini API.
         
@@ -112,6 +132,8 @@ Return ONLY the properly formatted JSON."""
             metrics_json (Dict): Evaluation metrics.
             segmentation_summary (Dict): Segmentation summary.
             context (Optional[Dict]): Context information.
+            deficit_metrics (Optional[Dict]): Metrics related to deficit regions.
+            flood_simulation (Optional[Dict]): Results from flood simulation.
         
         Returns:
             Dict: Report JSON with structured outputs and markdown.
@@ -123,7 +145,7 @@ Return ONLY the properly formatted JSON."""
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY environment variable not set")
         
-        prompt = self._build_report_prompt(metrics_json, segmentation_summary, context)
+        prompt = self._build_report_prompt(metrics_json, segmentation_summary, context, deficit_metrics, flood_simulation)
         
         logger.info(f"Sending request to Gemini API (model: {self.model_name})")
         logger.debug(f"Prompt length: {len(prompt)} characters")

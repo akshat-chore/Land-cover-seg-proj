@@ -110,6 +110,9 @@ class SegmentationModel:
         if patches.ndim == 6:
             patches = patches[:, :, 0, :, :, :]
         
+        # Convert patches to float32 to reduce memory usage
+        patches = patches.astype('float32')
+        
         mask_patches = np.zeros(patches.shape[:-1], dtype=np.uint8)
         
         logger.info(f"Processing {patches.shape[0]} x {patches.shape[1]} patches")
@@ -119,17 +122,14 @@ class SegmentationModel:
                 for j in range(patches.shape[1]):
                     # Preprocess patch (output shape depends on preprocessing_fn)
                     img_patch = self.preprocessing_fn(patches[i, j, :, :, :])
-                    
-                    # Handle batch dimension if preprocessing_fn added it
+
+                    # Process patches sequentially to reduce memory usage
                     if img_patch.ndim == 4:  # (1, H, W, C) or (1, C, H, W)
                         img_patch = img_patch.squeeze(0)
-                    
-                    # Ensure img_patch is in (C, H, W) format
+
                     if img_patch.ndim == 3 and img_patch.shape[2] == 3:
-                        # Shape is (H, W, C) - need to transpose
                         img_patch = img_patch.transpose(2, 0, 1).astype('float32')
                     elif img_patch.ndim == 3 and img_patch.shape[0] == 3:
-                        # Already (C, H, W)
                         img_patch = img_patch.astype('float32')
                     else:
                         logger.warning(f"Unexpected patch shape: {img_patch.shape}")
@@ -137,14 +137,14 @@ class SegmentationModel:
                             img_patch = img_patch.transpose(2, 0, 1).astype('float32')
                         else:
                             img_patch = img_patch.astype('float32')
-                    
+
                     x_tensor = torch.from_numpy(img_patch).to(self.device).unsqueeze(0)
-                    
+
                     # Model prediction
                     try:
                         pred_logits = self.model.predict(x_tensor)
                         pred_mask = pred_logits.squeeze().cpu().numpy()
-                        
+
                         # Apply argmax for multi-class segmentation
                         if pred_mask.ndim == 3:  # (C, H, W)
                             pred_mask = pred_mask.argmax(axis=0)
